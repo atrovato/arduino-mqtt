@@ -18,6 +18,7 @@ struct Device
   bool analog;
   GeneralFunction computer;
   unsigned int millisToWait;
+  unsigned int threshold;
   unsigned long lastTime;
   int lastValue;
   bool initialized;
@@ -75,6 +76,14 @@ bool publishMessage(const char *topic, const String message)
   return result;
 }
 
+bool isValidThreshold(Device &device, int rawVal) {
+  if (device.threshold) {
+    return (device.lastValue - device.threshold < rawVal) || (device.lastValue + device.threshold > rawVal);
+  } else {
+    return true;
+  }
+}
+
 void readAndPublish(Device &device)
 {
   unsigned long currentTime = millis();
@@ -90,7 +99,7 @@ void readAndPublish(Device &device)
       rawVal = digitalRead(device.pinID);
     }
 
-    if (!device.initialized || device.lastValue != rawVal)
+    if (!device.initialized || device.lastValue != rawVal || isValidThreshold(device, rawVal))
     {
       device.lastValue = rawVal;
       device.lastTime = currentTime;
@@ -142,8 +151,8 @@ void setup()
 
 int nbDevices = 3;
 Device devices[] = {
-    {"luminence", 0, true, NULL, 5000},
-    {"presence", 7, false, NULL, 0},
+    {"luminence", 0, true, NULL, 0, 25},
+    {"motion", 7, false, NULL, 0},
     {"temp", 1, true, computeTemperature, 60000}};
 
 void loop()
