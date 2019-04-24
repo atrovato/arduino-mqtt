@@ -78,7 +78,7 @@ bool publishMessage(const char *topic, const String message)
 
 bool isValidThreshold(Device &device, int rawVal) {
   if (device.threshold) {
-    return (device.lastValue - device.threshold < rawVal) || (device.lastValue + device.threshold > rawVal);
+    return (device.lastValue - device.threshold > rawVal) || (device.lastValue + device.threshold < rawVal);
   } else {
     return true;
   }
@@ -99,7 +99,7 @@ void readAndPublish(Device &device)
       rawVal = digitalRead(device.pinID);
     }
 
-    if (!device.initialized || device.lastValue != rawVal || isValidThreshold(device, rawVal))
+    if (!device.initialized || (device.lastValue != rawVal && isValidThreshold(device, rawVal)))
     {
       device.lastValue = rawVal;
       device.lastTime = currentTime;
@@ -119,9 +119,9 @@ void readAndPublish(Device &device)
       message += currentIP;
       message += "\",\"service\":\"mqtt\",\"type\":\"";
       message += device.deviceName;
-      message += "\",\"state\":{\"value\":";
+      message += "\",\"state\":{\"value\":\"";
       message += val;
-      message += "}}";
+      message += "\"}}";
 
       Serial.println(device.deviceName + " sending value=" + val);
       publishMessage("gladys/master/devicestate/create", message);
@@ -138,6 +138,12 @@ String computeTemperature(int defaultValue)
   return String(temp);
 }
 
+String computeLux(int defaultValue)
+{
+  float lux = (250.0 / (0.0048828125 * defaultValue)) - 50.0;
+  return String(lux);
+}
+
 void setup()
 {
   Serial.begin(57600);
@@ -151,7 +157,7 @@ void setup()
 
 int nbDevices = 3;
 Device devices[] = {
-    {"luminence", 0, true, NULL, 0, 25},
+    {"lum", 0, true, computeLux, 0, 25},
     {"motion", 7, false, NULL, 0},
     {"temp", 1, true, computeTemperature, 60000}};
 
